@@ -26,6 +26,7 @@ buttons = [
     {"rect": pygame.Rect(950, 150, 110, 40), "text": "hinh tron"},
     {"rect": pygame.Rect(1070, 50, 110, 40), "text": "hinh thang"},
     {"rect": pygame.Rect(1070, 100, 110, 40), "text": "hinh vuong"},
+    {"rect": pygame.Rect(950, 350, 120, 40), "text": "Đồng hồ"},
     {"rect": pygame.Rect(820, 200, 100, 40), "text": "3D mode"},
     {"rect": pygame.Rect(950, 200, 100, 40), "text": "Ve hinh___"},
     {"rect": pygame.Rect(950, 250, 100, 40), "text": "Ve hinh___"},
@@ -212,25 +213,95 @@ def draw_square(points, color=BLACK):
     draw_line((x3, y3), (x4, y4), color)
     draw_line((x4, y4), (x5, y5), color)
     draw_line((x5, y5), (x1, y1), color)
+
+
+def draw_clock(center_point, color=BLACK):
+    """Vẽ đồng hồ analog với đồng hồ phụ hiển thị giây"""
+    main_x, main_y = center_point
+    main_radius = 300  # Bán kính đồng hồ chính
+
+    # Vẽ đồng hồ chính (giờ và phút)
+    draw_circle(center_point, main_radius)
+    putPixel(center_point, RED)  # Tâm đồng hồ
+
+    # Vẽ các vạch chỉ giờ
+    for hour in range(1, 13):
+        angle = math.radians(hour * 30 - 90)
+        start_x = main_x + (main_radius - 15) * math.cos(angle)
+        start_y = main_y + (main_radius - 15) * math.sin(angle)
+        end_x = main_x + main_radius * math.cos(angle)
+        end_y = main_y + main_radius * math.sin(angle)
+        draw_line((start_x, start_y), (end_x, end_y), color)
+
+    # Lấy thời gian hiện tại
+    import datetime
+    now = datetime.datetime.now()
+    hours, minutes, seconds = now.hour % 12, now.minute, now.second
+
+    # Vẽ kim giờ
+    hour_angle = math.radians(hours * 30 + minutes * 0.5 - 90)
+    hour_end = (main_x + main_radius * 0.5 * math.cos(hour_angle),
+                main_y + main_radius * 0.5 * math.sin(hour_angle))
+    draw_line(center_point, hour_end, BLACK)
+
+    # Vẽ kim phút
+    minute_angle = math.radians(minutes * 6 - 90)
+    minute_end = (main_x + main_radius * 0.7 * math.cos(minute_angle),
+                  main_y + main_radius * 0.7 * math.sin(minute_angle))
+    draw_line(center_point, minute_end, BLUE)
+
+    # Vẽ đồng hồ phụ (giây) - đặt phía dưới đồng hồ chính
+    sub_center = (main_x, main_y + main_radius - 100)  # Cách đồng hồ chính 30px
+    sub_radius = 70  # Bán kính đồng hồ phụ
+
+    # Vẽ vòng tròn đồng hồ phụ
+    draw_circle(sub_center, sub_radius)
+    putPixel(sub_center, BLUE)  # Tâm đồng hồ phụ
+    # Vẽ vạch chỉ giây (mỗi 5 giây một vạch lớn)
+    for second in range(0, 60, 5):
+        angle = math.radians(second * 6 - 90)  # 6 độ mỗi giây
+        # Vạch dài hơn cho các mốc 15, 30, 45, 60 giây
+        is_major = second % 15 == 0
+        inner_offset = 3 if is_major else 5
+        outer_offset = 0 if is_major else 2
+
+        start_x = sub_center[0] + (sub_radius - inner_offset -10) * math.cos(angle)
+        start_y = sub_center[1] + (sub_radius - inner_offset-10) * math.sin(angle)
+        end_x = sub_center[0] + (sub_radius - outer_offset-10) * math.cos(angle)
+        end_y = sub_center[1] + (sub_radius - outer_offset-10) * math.sin(angle)
+
+        draw_line((start_x, start_y), (end_x, end_y), color)
+    # Vẽ kim giây (trên đồng hồ phụ)
+    second_angle = math.radians(seconds * 6 - 90)
+    second_end = (sub_center[0] + sub_radius * 0.9 * math.cos(second_angle),
+                  sub_center[1] + sub_radius * 0.9 * math.sin(second_angle))
+    draw_line(sub_center, second_end, RED)
+
+
 def draw_shape(shape_type, points):
     """Vẽ hình dựa trên loại hình và các điểm"""
     if len(points) < 2:
         return
 
-    if shape_type == "Line":
+    if shape_type == "duong thang":
         draw_line(points[0], points[1])
-    elif shape_type == "Rectangle":
+    elif shape_type == "hinh chu nhat":
         draw_rectangle(points[0], points[1])
-    elif shape_type == "Circle":
+    elif shape_type == "hinh tron":
         # Tính bán kính từ khoảng cách giữa 2 điểm
         x1, y1 = points[0]
         x2, y2 = points[1]
         radius = int(math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2))
         draw_circle(points[0], radius)
-    elif shape_type == "rhombus":
+    elif shape_type == "hinh thang":
         draw_trapezoid(points)
-    elif shape_type == "Square":
+    elif shape_type == "hinh vuong":
         draw_square(points)
+    elif shape_type == "Đồng hồ":
+        if len(points) == 2:
+            # Tính bán kính từ khoảng cách 2 điểm
+            radius = int(math.dist(points[0], points[1]))
+            draw_clock(points[0], radius)
 
 """---------------------------------PHẦN HÀM CHUNG---------------------------------"""
 
@@ -342,7 +413,8 @@ def click_mouse_pos(pos):
             # Lưu hình đã vẽ vào danh sách
             drawn_shapes.append({
                 'type': current_shape,
-                'points': [shape_points[0], shape_points[1]]
+                'points': shape_points.copy(),
+                'time': pygame.time.get_ticks() // 1000  # Lưu thời gian tạo
             })
             shape_points = []
 
@@ -356,7 +428,14 @@ def update_scene():
             putPixel(dpoint[0])
             putPixel(dpoint[1])
         for shape in drawn_shapes:
-            draw_shape(shape['type'], shape['points'])
+            if shape['type'] == "Đồng hồ":
+                # Tính thời gian đã trôi qua kể từ khi tạo đồng hồ
+                time_passed = (pygame.time.get_ticks() // 1000) - shape['time']
+                draw_clock(shape['points'][0],
+                           int(math.dist(shape['points'][0], shape['points'][1])),
+                           time_passed)
+            else:
+                draw_shape(shape['type'], shape['points'])
 
             # Vẽ hình tạm thời khi đang kéo chuột
         if current_shape and len(shape_points) == 1:
@@ -383,7 +462,7 @@ while running:
                 if button["rect"].collidepoint(event.pos):
                     if button["text"] in ['2D mode', '3D mode']:
                         set_mode(button["text"])
-                    elif button["text"] in ["Line", "Rectangle", "Circle", "rhombus", "Square"]:
+                    elif button["text"] in ["duong thang", "hinh chu nhat", "hinh tron", "hinh thang", "hinh vuong", "Đồng hồ"]:
                         current_shape = button["text"]
                         shape_points = []
                         print(f"Chọn vẽ hình: {current_shape}")

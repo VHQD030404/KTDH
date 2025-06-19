@@ -1,6 +1,7 @@
 import pygame
 from pygame import Vector2
 import math
+import numpy as np
 
 """---------------------------------PHẦN SETTING---------------------------------"""
 W, H = 1280, 720
@@ -11,6 +12,7 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 GRAY = (200, 200, 200)
+GREEN_NAVY = (107, 142, 35)
 pygame.init()
 screen = pygame.display.set_mode((W, H))
 clock = pygame.time.Clock()
@@ -21,32 +23,29 @@ font = pygame.font.SysFont('arial', 20)
 
 buttons = [
     {"rect": pygame.Rect(820, 50, 110, 40), "text": "2D mode"},
+    {"rect": pygame.Rect(820, 100, 110, 40), "text": "Đồng hồ"},
+    {"rect": pygame.Rect(820, 150, 110, 40), "text": "tank"},
     {"rect": pygame.Rect(950, 50, 110, 40), "text": "duong thang"},
     {"rect": pygame.Rect(950, 100, 110, 40), "text": "hinh chu nhat"},
     {"rect": pygame.Rect(950, 150, 110, 40), "text": "hinh tron"},
     {"rect": pygame.Rect(1070, 50, 110, 40), "text": "hinh thang"},
     {"rect": pygame.Rect(1070, 100, 110, 40), "text": "hinh vuong"},
-    {"rect": pygame.Rect(950, 350, 120, 40), "text": "Đồng hồ"},
     {"rect": pygame.Rect(820, 200, 100, 40), "text": "3D mode"},
     {"rect": pygame.Rect(950, 200, 100, 40), "text": "Ve hinh___"},
     {"rect": pygame.Rect(950, 250, 100, 40), "text": "Ve hinh___"},
     {"rect": pygame.Rect(820, 300, 120, 40), "text": "XOÁ DU LIEU"},
     {"rect": pygame.Rect(1000, 550, 100, 40), "text": "XÓA"},
     {"rect": pygame.Rect(1000, 500, 100, 40), "text": "NHAP"},
+    {"rect": pygame.Rect(820, 400, 120, 40), "text": "TINH TIEN"},
 ]
 input_boxes = [
-    {"rect": pygame.Rect(880, 500, 100, 30), "label": "X:", "value": "", "active": False},
-    {"rect": pygame.Rect(880, 540, 100, 30), "label": "Y:", "value": "", "active": False},
-    {"rect": pygame.Rect(880, 580, 100, 30), "label": "Z:", "value": "", "active": False}
+    {"rect": pygame.Rect(880, 450, 100, 30), "label": "dx:", "value": "", "active": False},
+    {"rect": pygame.Rect(880, 500, 100, 30), "label": "dy:", "value": "", "active": False},
+    {"rect": pygame.Rect(880, 550, 100, 30), "label": "X:", "value": "", "active": False},
+    {"rect": pygame.Rect(880, 600, 100, 30), "label": "Y:", "value": "", "active": False},
+    {"rect": pygame.Rect(880, 650, 100, 30), "label": "Z:", "value": "", "active": False},
+
 ]
-
-# Thêm biến để lưu hình cần vẽ
-current_shape = None
-shape_points = []  # Lưu các điểm của hình đang vẽ
-inputpoint_data = []
-points = []
-drawn_shapes = []
-
 def draw_UI(screen, font):
     for button in buttons:
         color = (150, 150, 150) if current_mode != button["text"] else (100, 100, 255)
@@ -66,9 +65,15 @@ def draw_UI(screen, font):
         label_surface = font.render(box["label"], True, (0, 0, 0))
         screen.blit(label_surface, (box["rect"].x - 25, box["rect"].y + 5))
 
+"""---------------------------------CÁC HÀM BIẾN ĐỔI---------------------------------"""
 
 """---------------------------------PHẦN HÀM VẼ HÌNH 2D---------------------------------"""
-
+# Thêm biến để lưu hình cần vẽ
+current_shape = None
+shape_points = []  # Lưu các điểm của hình đang vẽ
+inputpoint_data = []
+points = []
+drawn_shapes = []
 
 def draw_line(start, end, color=BLACK):
     """Vẽ đường thẳng từ start đến end sử dụng thuật toán Bresenham"""
@@ -104,11 +109,14 @@ def draw_line(start, end, color=BLACK):
             error += dx
 
 
-def draw_rectangle(start, end, color=BLACK):
+def draw_rectangle(start, end, color=BLACK, fill_color= None):
     """Vẽ hình chữ nhật từ start (góc trên trái) đến end (góc dưới phải)"""
     x1, y1 = start
     x2, y2 = end
-
+    if fill_color:
+        step = 0.1  # Bước nhảy (có thể điều chỉnh)
+        for y in np.arange(y1, y2 + step, step):
+            draw_line((x1, y), (x2, y), fill_color)
     # Vẽ 4 cạnh của hình chữ nhật
     draw_line((x1, y1), (x2, y1), color)  # Cạnh trên
     draw_line((x2, y1), (x2, y2), color)  # Cạnh phải
@@ -116,22 +124,28 @@ def draw_rectangle(start, end, color=BLACK):
     draw_line((x1, y2), (x1, y1), color)  # Cạnh trái
 
 
-def draw_circle(center, radius, color=BLACK):
-    """Vẽ hình tròn sử dụng thuật toán Midpoint"""
+def draw_circle(center, radius, color=BLACK, fill_color=None):
+    """Vẽ hình tròn sử dụng thuật toán Midpoint với tùy chọn tô màu nền"""
     x0, y0 = center
     x = radius
     y = 0
     err = 0
 
+    border_points = set()
+
+    # Vẽ đường viền và lưu các điểm biên
     while x >= y:
-        putPixel((x0 + x, y0 + y), color)
-        putPixel((x0 + y, y0 + x), color)
-        putPixel((x0 - y, y0 + x), color)
-        putPixel((x0 - x, y0 + y), color)
-        putPixel((x0 - x, y0 - y), color)
-        putPixel((x0 - y, y0 - x), color)
-        putPixel((x0 + y, y0 - x), color)
-        putPixel((x0 + x, y0 - y), color)
+        # 8 điểm đối xứng
+        points = [
+            (x0 + x, y0 + y), (x0 + y, y0 + x),
+            (x0 - y, y0 + x), (x0 - x, y0 + y),
+            (x0 - x, y0 - y), (x0 - y, y0 - x),
+            (x0 + y, y0 - x), (x0 + x, y0 - y)
+        ]
+
+        for point in points:
+            putPixel(point, color)
+            border_points.add((point[0], point[1]))
 
         y += 1
         err += 1 + 2 * y
@@ -139,8 +153,44 @@ def draw_circle(center, radius, color=BLACK):
             x -= 1
             err += 1 - 2 * x
 
+    # Nếu có màu nền, thực hiện tô màu bằng thuật toán scanline(dùng để vẽ tank)
+    if fill_color is not None:
+        # Chuyển border_points thành dictionary để dễ truy cập theo y
+        scan_lines = {}
+        for (px, py) in border_points:
+            if py not in scan_lines:
+                scan_lines[py] = []
+            scan_lines[py].append(px)
 
-def draw_trapezoid(points, color=BLACK):
+        # Sắp xếp các giá trị y để quét từ trên xuống hoặc từ dưới lên
+        sorted_ys = sorted(scan_lines.keys())
+
+        for y in sorted_ys:
+            x_values = scan_lines[y]
+            if len(x_values) < 2:
+                continue  # Bỏ qua nếu không đủ điểm để tạo đoạn
+
+            x_min = min(x_values)
+            x_max = max(x_values)
+            step = 0.1
+            # Tô màu các điểm giữa x_min và x_max
+            for x in np.arange(x_min + 1, x_max, step):
+                if (x, y) not in border_points:  # Chỉ tô nếu không phải điểm biên
+                    putPixel((x, y), fill_color)
+
+            # Cập nhật giao diện sau mỗi dòng quét để tránh Not Responding
+            if y % 5 == 0:  # Cập nhật sau mỗi 5 dòng để cân bằng hiệu năng
+                if hasattr(putPixel, '__gui_update__'):
+                    putPixel.__gui_update__()
+                else:
+                    try:
+                        import time
+                        time.sleep(0.001)  # Nhường CPU nếu cần
+                    except:
+                        pass
+
+
+def draw_trapezoid(points, color=BLACK, fill_color=GREEN):
     """Vẽ hình thang cân từ 2 điểm (đáy lớn) và tự tính đáy nhỏ"""
     if len(points) < 2:
         return
@@ -164,6 +214,9 @@ def draw_trapezoid(points, color=BLACK):
     perp_dx = -dy / base_length
     perp_dy = dx / base_length
 
+    if perp_dy > 0:
+        perp_dx = -perp_dx
+        perp_dy = -perp_dy
     height = base_length * 0.4
     top_mid_x = mid_x + perp_dx * height
     top_mid_y = mid_y + perp_dy * height
@@ -173,13 +226,49 @@ def draw_trapezoid(points, color=BLACK):
           top_mid_y - small_base / 2 * dy / base_length)
     p4 = (top_mid_x + small_base / 2 * dx / base_length,
           top_mid_y + small_base / 2 * dy / base_length)
+    if fill_color is not None:
+        # Tìm bounding box
+        min_y = min(p1[1], p2[1], p3[1], p4[1])
+        max_y = max(p1[1], p2[1], p3[1], p4[1])
 
+        # Quét từng dòng để tô màu
+        for y in range(int(min_y), int(max_y) + 1):
+            # Tìm giao điểm với các cạnh
+            intersections = []
+            edges = [(p1, p3), (p3, p4), (p4, p2), (p2, p1)]
+
+            for edge_start, edge_end in edges:
+                x_intersect = find_intersection_y(edge_start, edge_end, y)
+                if x_intersect is not None:
+                    intersections.append(x_intersect)
+
+            if len(intersections) >= 2:
+                # Vẽ đường ngang giữa các giao điểm
+                draw_line((min(intersections), y), (max(intersections), y), fill_color)
     # Vẽ hình thang
     draw_line(p1, p2, color)
     draw_line(p2, p4, color)
     draw_line(p4, p3, color)
     draw_line(p3, p1, color)
 
+
+def find_intersection_y(p1, p2, y):
+    """Tìm giao điểm của đường thẳng p1-p2 với đường ngang y"""
+    x1, y1 = p1
+    x2, y2 = p2
+
+    # Kiểm tra nếu đoạn thẳng nằm ngang
+    if y1 == y2:
+        return None if y != y1 else min(x1, x2)
+
+    # Kiểm tra nếu y nằm ngoài khoảng y của đoạn thẳng
+    if (y < min(y1, y2)) or (y > max(y1, y2)):
+        return None
+
+    # Tính x theo phương trình đường thẳng
+    t = (y - y1) / (y2 - y1)
+    x = x1 + t * (x2 - x1)
+    return x
 
 def draw_square(points, color=BLACK):
     """Vẽ hình vuông từ 2 điểm (điểm 1 là góc, điểm 2 xác định cạnh)"""
@@ -218,7 +307,7 @@ def draw_square(points, color=BLACK):
 def draw_clock(center_point, color=BLACK):
     """Vẽ đồng hồ analog với đồng hồ phụ hiển thị giây"""
     main_x, main_y = center_point
-    main_radius = 300  # Bán kính đồng hồ chính
+    main_radius = 150  # Bán kính đồng hồ chính
 
     # Vẽ đồng hồ chính (giờ và phút)
     draw_circle(center_point, main_radius)
@@ -251,32 +340,66 @@ def draw_clock(center_point, color=BLACK):
     draw_line(center_point, minute_end, BLUE)
 
     # Vẽ đồng hồ phụ (giây) - đặt phía dưới đồng hồ chính
-    sub_center = (main_x, main_y + main_radius - 100)  # Cách đồng hồ chính 30px
-    sub_radius = 70  # Bán kính đồng hồ phụ
+    sec_center = (main_x, main_y + main_radius - 60)  # Cách đồng hồ chính 30px
+    sec_radius = main_radius// 5  # Bán kính đồng hồ phụ
 
     # Vẽ vòng tròn đồng hồ phụ
-    draw_circle(sub_center, sub_radius)
-    putPixel(sub_center, BLUE)  # Tâm đồng hồ phụ
+    draw_circle(sec_center, sec_radius)
+    putPixel(sec_center, BLUE)  # Tâm đồng hồ phụ
     # Vẽ vạch chỉ giây (mỗi 5 giây một vạch lớn)
     for second in range(0, 60, 5):
         angle = math.radians(second * 6 - 90)  # 6 độ mỗi giây
         # Vạch dài hơn cho các mốc 15, 30, 45, 60 giây
         is_major = second % 15 == 0
-        inner_offset = 3 if is_major else 5
-        outer_offset = 0 if is_major else 2
+        inner_offset = 15 if is_major else 15  # Giảm khoảng cách từ biên
+        outer_offset = 0 if is_major else 5  # Giảm khoảng cách từ biên
 
-        start_x = sub_center[0] + (sub_radius - inner_offset -10) * math.cos(angle)
-        start_y = sub_center[1] + (sub_radius - inner_offset-10) * math.sin(angle)
-        end_x = sub_center[0] + (sub_radius - outer_offset-10) * math.cos(angle)
-        end_y = sub_center[1] + (sub_radius - outer_offset-10) * math.sin(angle)
-
+        # Tính toán vị trí bắt đầu và kết thúc của vạch
+        start_x = sec_center[0] + (sec_radius - inner_offset +5) * math.cos(angle)
+        start_y = sec_center[1] + (sec_radius - inner_offset+5) * math.sin(angle)
+        end_x = sec_center[0] + (sec_radius - outer_offset) * math.cos(angle)
+        end_y = sec_center[1] + (sec_radius - outer_offset) * math.sin(angle)
         draw_line((start_x, start_y), (end_x, end_y), color)
     # Vẽ kim giây (trên đồng hồ phụ)
     second_angle = math.radians(seconds * 6 - 90)
-    second_end = (sub_center[0] + sub_radius * 0.9 * math.cos(second_angle),
-                  sub_center[1] + sub_radius * 0.9 * math.sin(second_angle))
-    draw_line(sub_center, second_end, RED)
+    second_end = (sec_center[0] + sec_radius * 0.5 * math.cos(second_angle),
+                  sec_center[1] + sec_radius * 0.5 * math.sin(second_angle))
+    draw_line(sec_center, second_end, RED)
 
+
+def draw_tank(center_point, radius=20, color=BLACK, fill_color=GREEN_NAVY):
+    """Vẽ 4 hình tròn cùng bán kính theo hàng ngang"""
+    rect_height = radius
+    # Lấy tọa độ x, y từ tuple center_point
+    x, y = center_point[0], center_point[1]  # Giải nén tuple
+    spacing = radius * 3  # Khoảng cách giữa các hình tròn
+    #bánh xe
+    draw_rectangle(start= (x - spacing * 1.5, y - radius), end=(x + spacing * 1.5, y + radius), color=color, fill_color=fill_color )
+    for i in range(4):
+        circle_x = x + (i - 1.5) * spacing  # Tính toán vị trí để căn giữa
+        draw_circle((circle_x, y), radius, color, fill_color=BLACK)
+
+
+    trapezoid_height = radius * 3
+    top_y = y - radius - trapezoid_height
+    #nòng pháo
+    rect_top = top_y - rect_height
+    draw_rectangle(
+        start=(x + spacing + 100, top_y + 10),
+        end=(x - spacing + 50, rect_top + 70),
+        color=color,
+        fill_color=fill_color  # Thêm màu nền
+    )
+    #thân xe
+    trapezoid_top_y = y + radius + trapezoid_height
+    bottom_left = (x - spacing * 1.5, y - radius)  # Điểm trái đáy lớn
+    bottom_right = (x + spacing * 1.5, y - radius)  # Điểm phải đáy lớn
+
+    draw_trapezoid(
+        points=[bottom_left, bottom_right, trapezoid_top_y],  # 2 điểm đáy lớn
+        color=color,
+        fill_color=fill_color  # Sử dụng màu nền được truyền vào
+    )
 
 def draw_shape(shape_type, points):
     """Vẽ hình dựa trên loại hình và các điểm"""
@@ -302,6 +425,9 @@ def draw_shape(shape_type, points):
             # Tính bán kính từ khoảng cách 2 điểm
             radius = int(math.dist(points[0], points[1]))
             draw_clock(points[0], radius)
+    if shape_type == "tank":
+        if len(points) >= 1:
+            draw_tank(points[0])
 
 """---------------------------------PHẦN HÀM CHUNG---------------------------------"""
 
@@ -441,8 +567,15 @@ def update_scene():
         if current_shape and len(shape_points) == 1:
             mouse_pos = pygame.mouse.get_pos()
             if draw_area.collidepoint(mouse_pos):
-                temp_points = [shape_points[0], revert_pos(convert_pos(mouse_pos))]
-                draw_shape(current_shape, temp_points)
+                if current_shape == "tank":
+                    # Chỉ cần 1 điểm cho 4 hình tròn
+                    temp_points = [revert_pos(convert_pos(mouse_pos))]
+                    draw_tank(temp_points[0])
+                else:
+                    # Xử lý các hình khác như cũ
+                    temp_points = shape_points.copy()
+                    temp_points.append(revert_pos(convert_pos(mouse_pos)))
+                    draw_shape(current_shape, temp_points)
     elif current_mode == '3D mode':
         draw_3d_axes(screen)
 
@@ -462,7 +595,7 @@ while running:
                 if button["rect"].collidepoint(event.pos):
                     if button["text"] in ['2D mode', '3D mode']:
                         set_mode(button["text"])
-                    elif button["text"] in ["duong thang", "hinh chu nhat", "hinh tron", "hinh thang", "hinh vuong", "Đồng hồ"]:
+                    elif button["text"] in ["duong thang", "hinh chu nhat", "hinh tron", "hinh thang", "hinh vuong", "Đồng hồ", "tank"]:
                         current_shape = button["text"]
                         shape_points = []
                         print(f"Chọn vẽ hình: {current_shape}")
